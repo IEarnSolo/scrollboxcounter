@@ -2,6 +2,7 @@ package com.scrollboxcounter;
 
 import com.google.inject.Inject;
 import net.runelite.api.Client;
+import net.runelite.api.InventoryID;
 import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
@@ -14,12 +15,15 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 
 	private final ScrollBoxCounterConfig config;
 	private final Client client;
+	private final ScrollBoxCounterPlugin plugin;
+	private int currentItemId; // Store current item ID during rendering
 
 	@Inject
-	ScrollBoxCounterOverlay(ScrollBoxCounterConfig config, Client client)
+	ScrollBoxCounterOverlay(ScrollBoxCounterConfig config, Client client, ScrollBoxCounterPlugin plugin)
 	{
 		this.config = config;
 		this.client = client;
+		this.plugin = plugin;
 		showOnInventory();
 		showOnBank();
 	}
@@ -31,6 +35,8 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		{
 			return;
 		}
+
+		this.currentItemId = itemId; // Store for use in helper methods
 
 		final Rectangle bounds = widgetItem.getCanvasBounds();
 		if (bounds == null)
@@ -44,29 +50,62 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			return;
 		}
 
+		boolean isInBank = isItemInBank(widgetItem);
 		int maxClues = getMaxClueCount(itemId);
-		boolean isFullStack = config.markFullStacks() && quantity >= maxClues;
+		int bankCount = plugin.getBankCount(itemId);
 
-		if (!config.showCounter() && !isFullStack)
+		// Calculate total count for color determination
+		int totalCount = quantity + (isInBank ? 0 : bankCount);
+		// If we're in bank, we need to add inventory count for full stack check
+		if (isInBank)
+		{
+			// Get inventory count for this item
+			int inventoryCount = getInventoryCount(itemId);
+			totalCount = quantity + inventoryCount;
+		}
+
+		boolean isFullStack = config.markFullStacks() && totalCount >= maxClues;
+
+		// Always show something if we have items or if counter/banked is enabled
+		if (config.maxCluePosition() == ScrollBoxCounterConfig.MaxCluePosition.DISABLED && !config.showBanked() && !isFullStack)
 		{
 			return;
 		}
 
-		renderOverlayText(graphics, bounds, quantity, maxClues, isFullStack);
+		renderOverlayText(graphics, bounds, quantity, maxClues, isFullStack, isInBank);
 	}
 
-	private void renderOverlayText(Graphics2D graphics, Rectangle bounds, int quantity, int maxClues, boolean isFullStack)
+	private boolean isItemInBank(WidgetItem widgetItem)
+	{
+		// Check if the widget is from the bank interface
+		return widgetItem.getWidget().getId() >>> 16 == 12; // Bank widget group ID is 12
+	}
+
+	private void renderOverlayText(Graphics2D graphics, Rectangle bounds, int quantity, int maxClues, boolean isFullStack, boolean isInBank)
 	{
 		graphics.setFont(FontManager.getRunescapeSmallFont());
-		Color textColor = isFullStack ? Color.RED : Color.YELLOW;
+		Color textColor = isFullStack ? Color.RED : Color.WHITE;
 
-		if (isFullStack && !config.showCounter())
+		// Always show quantity if full stack is reached
+		if (isFullStack)
 		{
 			renderQuantityOnly(graphics, bounds, quantity, textColor);
 		}
-		else if (config.showCounter())
+
+		if (config.maxCluePosition() != ScrollBoxCounterConfig.MaxCluePosition.DISABLED)
 		{
-			renderQuantityAndMax(graphics, bounds, quantity, maxClues, textColor);
+			// Render max clues in selected position
+			renderMaxClues(graphics, bounds, maxClues, textColor, config.maxCluePosition());
+		}
+
+		// Show banked quantity if enabled and NOT in bank (independent of showCounter)
+		if (config.showBanked() && !isInBank)
+		{
+			int bankCount = plugin.getBankCount(currentItemId);
+			if (bankCount > 0)
+			{
+				renderBankedQuantity(graphics, bounds, bankCount, textColor);
+			}
 		}
 	}
 
@@ -77,25 +116,59 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		graphics.drawString(quantityText, bounds.x, bounds.y + 10);
 	}
 
-	private void renderQuantityAndMax(Graphics2D graphics, Rectangle bounds, int quantity, int maxClues, Color textColor)
+	private void renderMaxClues(Graphics2D graphics, Rectangle bounds, int maxClues, Color textColor, ScrollBoxCounterConfig.MaxCluePosition position)
 	{
-		String quantityText = String.valueOf(quantity);
-		graphics.setColor(textColor);
-		graphics.drawString(quantityText, bounds.x, bounds.y + 10);
-
+		String maxText = String.valueOf(maxClues);
 		FontMetrics fm = graphics.getFontMetrics();
-		int quantityWidth = fm.stringWidth(quantityText);
-		String additionalText = "/" + maxClues;
-		int x = bounds.x + quantityWidth + 1;
+		int textWidth = fm.stringWidth(maxText);
+
+		int x, y;
+		switch (position)
+		{
+			case BOTTOM_LEFT:
+				x = bounds.x;
+				y = bounds.y + bounds.height - 2;
+				break;
+			case BOTTOM_RIGHT:
+				x = bounds.x + bounds.width - textWidth;
+				y = bounds.y + bounds.height - 2;
+				break;
+			default:
+				return; // DISABLED case
+		}
+
+		// Draw shadow
+		graphics.setColor(Color.BLACK);
+		graphics.drawString(maxText, x + 1, y + 1);
+
+		// Draw main text
+		graphics.setColor(textColor);
+		graphics.drawString(maxText, x, y);
+	}
+
+	private void renderBankedQuantity(Graphics2D graphics, Rectangle bounds, int bankCount, Color textColor)
+	{
+		String bankedText = "+" + bankCount;
+		FontMetrics fm = graphics.getFontMetrics();
+
+		// Position at top-right of the item
+		int x = bounds.x + bounds.width - fm.stringWidth(bankedText);
 		int y = bounds.y + 10;
 
 		// Draw shadow
 		graphics.setColor(Color.BLACK);
-		graphics.drawString(additionalText, x + 1, y + 1);
+		graphics.drawString(bankedText, x + 1, y + 1);
 
 		// Draw main text
 		graphics.setColor(textColor);
-		graphics.drawString(additionalText, x, y);
+		graphics.drawString(bankedText, x, y);
+	}
+
+	private int getItemIdFromBounds(Rectangle bounds)
+	{
+		// This is a helper method to get itemId from current render context
+		// Since we need the itemId in renderBankedQuantity, we'll need to modify the render chain
+		return currentItemId;
 	}
 
 	private int getMaxClueCount(int itemId)
@@ -145,5 +218,15 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 	{
 		return client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_MIMIC);
 	}
-}
 
+	private int getInventoryCount(int itemId)
+	{
+		// Get inventory count for the given item
+		net.runelite.api.ItemContainer inventory = client.getItemContainer(InventoryID.INVENTORY);
+		if (inventory == null)
+		{
+			return 0;
+		}
+		return inventory.count(itemId);
+	}
+}

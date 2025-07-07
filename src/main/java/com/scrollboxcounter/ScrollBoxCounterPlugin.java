@@ -2,7 +2,15 @@ package com.scrollboxcounter;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
+import java.util.HashMap;
+import java.util.Map;
+import net.runelite.api.Client;
+import net.runelite.api.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -12,8 +20,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 	description = "Displays the maximum number of Clue Scroll Boxes you can hold per tier.",
 	tags = {"clue","scroll"}
 )
-public class ScrollBoxCounterPlugin extends Plugin
-{
+public class ScrollBoxCounterPlugin extends Plugin {
 	// Clue Scroll Box Item ID
 	public static final int CLUE_SCROLL_BOX_BEGINNER = 24361;
 	public static final int CLUE_SCROLL_BOX_EASY = 24362;
@@ -38,10 +45,15 @@ public class ScrollBoxCounterPlugin extends Plugin
 	public static final int SCROLL_CASE_MIMIC = 16595;
 
 	@Inject
+	private Client client;
+
+	@Inject
 	private OverlayManager overlayManager;
 
 	@Inject
 	private ScrollBoxCounterOverlay overlay;
+
+	private final Map<Integer, Integer> bankItems = new HashMap<>();
 
 	@Override
 	protected void startUp() {
@@ -51,21 +63,47 @@ public class ScrollBoxCounterPlugin extends Plugin
 	@Override
 	protected void shutDown() {
 		overlayManager.remove(overlay);
+		bankItems.clear();
 	}
 
 	@Provides
-	ScrollBoxCounterConfig provideConfig(ConfigManager configManager)
-	{
+	ScrollBoxCounterConfig provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(ScrollBoxCounterConfig.class);
 	}
 
-	public static boolean isClueScrollBox(int itemId)
-	{
+	public static boolean isClueScrollBox(int itemId) {
 		return itemId == CLUE_SCROLL_BOX_BEGINNER ||
-			   itemId == CLUE_SCROLL_BOX_EASY ||
-			   itemId == CLUE_SCROLL_BOX_MEDIUM ||
-			   itemId == CLUE_SCROLL_BOX_HARD ||
-			   itemId == CLUE_SCROLL_BOX_ELITE ||
-			   itemId == CLUE_SCROLL_BOX_MASTER;
+				itemId == CLUE_SCROLL_BOX_EASY ||
+				itemId == CLUE_SCROLL_BOX_MEDIUM ||
+				itemId == CLUE_SCROLL_BOX_HARD ||
+				itemId == CLUE_SCROLL_BOX_ELITE ||
+				itemId == CLUE_SCROLL_BOX_MASTER;
+	}
+
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event) {
+		if (event.getContainerId() == InventoryID.BANK.getId()) {
+			updateBankItems(event.getItemContainer());
+		}
+	}
+
+	private void updateBankItems(ItemContainer bank) {
+		// Clear existing bank items for scroll boxes
+		bankItems.entrySet().removeIf(entry -> isClueScrollBox(entry.getKey()));
+
+		if (bank != null) {
+			Item[] items = bank.getItems();
+			for (Item item : items) {
+				if (item != null && item.getId() != -1 && item.getQuantity() > 0) {
+					if (isClueScrollBox(item.getId())) {
+						bankItems.put(item.getId(), item.getQuantity());
+					}
+				}
+			}
+		}
+	}
+
+	public int getBankCount(int itemId) {
+		return bankItems.getOrDefault(itemId, 0);
 	}
 }
