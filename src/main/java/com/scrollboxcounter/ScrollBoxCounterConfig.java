@@ -7,6 +7,9 @@ import net.runelite.client.config.ConfigItem;
 @ConfigGroup("scrollboxcounter")
 public interface ScrollBoxCounterConfig extends Config
 {
+	/**
+	 * Position options for displaying the maximum clue scroll count.
+	 */
 	enum MaxCluePosition
 	{
 		DISABLED("Disabled"),
@@ -30,7 +33,7 @@ public interface ScrollBoxCounterConfig extends Config
 	@ConfigItem(
 		keyName = "maxCluePosition",
 		name = "Max Clue Scrolls Position",
-		description = "Choose where to display the maximum clue scroll count"
+		description = "Choose where to display the maximum clue scroll count on each item"
 	)
 	default MaxCluePosition maxCluePosition()
 	{
@@ -40,7 +43,7 @@ public interface ScrollBoxCounterConfig extends Config
 	@ConfigItem(
 		keyName = "markFullStacks",
 		name = "Mark Full Stacks",
-		description = "Mark the counter red when the item count equals the maximum"
+		description = "Mark counters red when total item count (inventory + bank) reaches maximum capacity"
 	)
 	default boolean markFullStacks()
 	{
@@ -50,7 +53,7 @@ public interface ScrollBoxCounterConfig extends Config
 	@ConfigItem(
 		keyName = "showBanked",
 		name = "Show Banked",
-		description = "Show the quantity of clue scroll boxes in the bank when viewing inventory"
+		description = "Show the quantity of clue scroll boxes stored in the bank when viewing inventory"
 	)
 	default boolean showBanked()
 	{

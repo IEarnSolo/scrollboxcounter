@@ -5,7 +5,7 @@ import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 import net.runelite.api.Client;
-import net.runelite.api.InventoryID;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.events.ItemContainerChanged;
@@ -21,7 +21,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 	tags = {"clue","scroll"}
 )
 public class ScrollBoxCounterPlugin extends Plugin {
-	// Clue Scroll Box Item ID
+	// Clue Scroll Box Item IDs
 	public static final int CLUE_SCROLL_BOX_BEGINNER = 24361;
 	public static final int CLUE_SCROLL_BOX_EASY = 24362;
 	public static final int CLUE_SCROLL_BOX_MEDIUM = 24363;
@@ -29,7 +29,7 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	public static final int CLUE_SCROLL_BOX_ELITE = 24365;
 	public static final int CLUE_SCROLL_BOX_MASTER = 24366;
 
-	// Scroll Case Varbits
+	// Scroll Case Upgrade Varbits
 	public static final int SCROLL_CASE_BEGINNER_MINOR = 16565;
 	public static final int SCROLL_CASE_BEGINNER_MAJOR = 16566;
 	public static final int SCROLL_CASE_EASY_MINOR = 16567;
@@ -71,6 +71,9 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		return configManager.getConfig(ScrollBoxCounterConfig.class);
 	}
 
+	/**
+	 * Checks if the given item ID is a clue scroll box.
+	 */
 	public static boolean isClueScrollBox(int itemId) {
 		return itemId == CLUE_SCROLL_BOX_BEGINNER ||
 				itemId == CLUE_SCROLL_BOX_EASY ||
@@ -80,29 +83,36 @@ public class ScrollBoxCounterPlugin extends Plugin {
 				itemId == CLUE_SCROLL_BOX_MASTER;
 	}
 
+	/**
+	 * Handles bank container changes to track clue scroll box quantities.
+	 */
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event) {
-		if (event.getContainerId() == InventoryID.BANK.getId()) {
+		if (event.getContainerId() == InventoryID.BANK) {
 			updateBankItems(event.getItemContainer());
 		}
 	}
 
+	/**
+	 * Updates the cached bank items for clue scroll boxes.
+	 */
 	private void updateBankItems(ItemContainer bank) {
-		// Clear existing bank items for scroll boxes
 		bankItems.entrySet().removeIf(entry -> isClueScrollBox(entry.getKey()));
 
 		if (bank != null) {
 			Item[] items = bank.getItems();
 			for (Item item : items) {
-				if (item != null && item.getId() != -1 && item.getQuantity() > 0) {
-					if (isClueScrollBox(item.getId())) {
+				if (item != null && item.getId() != -1 && item.getQuantity() > 0 && isClueScrollBox(item.getId())) {
 						bankItems.put(item.getId(), item.getQuantity());
 					}
-				}
+
 			}
 		}
 	}
 
+	/**
+	 * Gets the count of a specific clue scroll box in the bank.
+	 */
 	public int getBankCount(int itemId) {
 		return bankItems.getOrDefault(itemId, 0);
 	}
