@@ -8,10 +8,10 @@ A RuneLite plugin that displays the maximum number of clue scroll boxes you can 
 - **Shows banked count**: Displays the number of clue scroll boxes you currently have in your bank (**only after you have visited a bank**)
 
 ### Bank view (all settings enabled)
-![Plugin demonstration showing counter overlay on clue scroll boxes](bank_demo_all_settings.png)
+![Plugin demonstration showing counter overlay on clue scroll boxes in bank](bank_demo_all_settings.png)
 
 ### Inventory (all settings enabled)
-![Plugin demonstration showing counter overlay on clue scroll boxes](inv_demo_all_settings.png)
+![Plugin demonstration showing counter overlay on clue scroll boxes in inventory](inv_demo_all_settings.png)
 
 
 ### Inventory/Bank (only marking full stacks)
