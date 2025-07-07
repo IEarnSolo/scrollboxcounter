@@ -16,9 +16,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 @PluginDescriptor(
-	name = "Scroll Box Counter",
-	description = "Displays the maximum number of Clue Scroll Boxes you can hold per tier.",
-	tags = {"clue","scroll"}
+	name = "Scroll Box Counter"
 )
 public class ScrollBoxCounterPlugin extends Plugin {
 	// Clue Scroll Box Item IDs

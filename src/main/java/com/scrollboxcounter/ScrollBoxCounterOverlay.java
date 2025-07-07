@@ -92,8 +92,8 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		graphics.setFont(FontManager.getRunescapeSmallFont());
 		Color textColor = isFullStack ? Color.RED : Color.WHITE;
 
-		// Show quantity when stack is full or when showing banked items
-		if (isFullStack || (config.showBanked() && !isInBank && plugin.getBankCount(currentItemId) > 0))
+		// Only render quantity when stack is full (red highlighting)
+		if (isFullStack)
 		{
 			renderQuantityOnly(graphics, bounds, quantity, textColor);
 		}
