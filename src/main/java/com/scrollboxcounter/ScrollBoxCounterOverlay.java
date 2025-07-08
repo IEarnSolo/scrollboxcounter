@@ -4,10 +4,14 @@ import com.google.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.widgets.WidgetItem;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.Item;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
 
 import java.awt.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Overlay that displays clue scroll box counts and maximum capacity on items.
@@ -20,6 +24,8 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 	private final Client client;
 	private final ScrollBoxCounterPlugin plugin;
 	private int currentItemId;
+	private final Map<Integer, Integer> previousInventoryCounts = new HashMap<>();
+	private boolean initializedInventoryTracking = false;
 
 	@Inject
 	ScrollBoxCounterOverlay(ScrollBoxCounterConfig config, Client client, ScrollBoxCounterPlugin plugin)
@@ -29,6 +35,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		this.plugin = plugin;
 		showOnInventory();
 		showOnBank();
+		// Don't call updatePreviousInventoryCounts() here - it will be called on first render
 	}
 
 	@Override
@@ -40,6 +47,17 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		}
 
 		this.currentItemId = itemId;
+
+		// Initialize inventory tracking on first render (on client thread)
+		if (!initializedInventoryTracking) {
+			updatePreviousInventoryCounts();
+			initializedInventoryTracking = true;
+		}
+
+		// Check for inventory changes when rendering inventory items
+		if (!isItemInBank(widgetItem)) {
+			checkInventoryChanges();
+		}
 
 		final Rectangle bounds = widgetItem.getCanvasBounds();
 		if (bounds == null)
@@ -245,5 +263,90 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			return 0;
 		}
 		return inventory.count(itemId);
+	}
+
+	/**
+	 * Checks if scroll box quantities in inventory have changed.
+	 */
+	private void checkInventoryChanges() {
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		if (inventory == null) {
+			return;
+		}
+
+		// Count current inventory scroll boxes
+		Map<Integer, Integer> currentCounts = new HashMap<>();
+		for (Item item : inventory.getItems()) {
+			if (item != null && item.getId() != -1 && ScrollBoxCounterPlugin.isClueScrollBox(item.getId())) {
+				currentCounts.put(item.getId(), item.getQuantity());
+			}
+		}
+
+		// Check for increases
+		for (Map.Entry<Integer, Integer> entry : currentCounts.entrySet()) {
+			int itemId = entry.getKey();
+			int currentCount = entry.getValue();
+			int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
+
+			if (currentCount > previousCount) {
+				sendScrollBoxMessage(itemId, currentCount);
+			}
+		}
+
+		// Update previous counts
+		previousInventoryCounts.clear();
+		previousInventoryCounts.putAll(currentCounts);
+	}
+
+	/**
+	 * Sends chat message when scroll box is picked up.
+	 */
+	private void sendScrollBoxMessage(int itemId, int inventoryCount) {
+		String tierName = getScrollBoxTierName(itemId);
+		int bankCount = plugin.getBankCount(itemId);
+		int totalCount = inventoryCount + bankCount;
+		int maxCount = getMaxClueCount(itemId);
+
+		String message = "Holding " + totalCount + "/" + maxCount + " scroll boxes (" + tierName + ")";
+		plugin.sendChatMessage(message);
+	}
+
+	/**
+	 * Gets tier name for scroll box.
+	 */
+	private String getScrollBoxTierName(int itemId) {
+		switch (itemId) {
+			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_BEGINNER:
+				return "Beginner";
+			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_EASY:
+				return "Easy";
+			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MEDIUM:
+				return "Medium";
+			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_HARD:
+				return "Hard";
+			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_ELITE:
+				return "Elite";
+			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MASTER:
+				return "Master";
+			default:
+				return "Unknown";
+		}
+	}
+
+	/**
+	 * Updates previous inventory counts (called on client thread).
+	 */
+	private void updatePreviousInventoryCounts() {
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		if (inventory == null) {
+			return;
+		}
+
+		previousInventoryCounts.clear();
+		for (Item item : inventory.getItems()) {
+			if (item != null && item.getId() != -1 && ScrollBoxCounterPlugin.isClueScrollBox(item.getId())) {
+				previousInventoryCounts.put(item.getId(), item.getQuantity());
+			}
+		}
 	}
 }

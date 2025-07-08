@@ -4,11 +4,17 @@ import com.google.inject.Provides;
 import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
+
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.client.chat.ChatColorType;
+import net.runelite.client.chat.ChatMessageBuilder;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -51,11 +57,15 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	@Inject
 	private ScrollBoxCounterOverlay overlay;
 
+	@Inject
+	private ChatMessageManager chatMessageManager;
+
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
 
 	@Override
 	protected void startUp() {
 		overlayManager.add(overlay);
+		sendChatMessage("Scroll Box Counter plugin started! It will now track your clue scroll boxes in the bank and inventory.");
 	}
 
 	@Override
@@ -113,5 +123,19 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	 */
 	public int getBankCount(int itemId) {
 		return bankItems.getOrDefault(itemId, 0);
+	}
+
+	public void sendChatMessage(String chatMessage)
+	{
+		final String message = new ChatMessageBuilder()
+				.append(ChatColorType.HIGHLIGHT)
+				.append(chatMessage)
+				.build();
+
+		chatMessageManager.queue(
+				QueuedMessage.builder()
+						.type(ChatMessageType.CONSOLE)
+						.runeLiteFormattedMessage(message)
+						.build());
 	}
 }
