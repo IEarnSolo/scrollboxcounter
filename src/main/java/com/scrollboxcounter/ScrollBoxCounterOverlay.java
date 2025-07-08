@@ -289,7 +289,10 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
 
 			if (currentCount > previousCount) {
-				sendScrollBoxMessage(itemId, currentCount);
+				// Only send message if item was recently picked up from ground
+				if (plugin.wasRecentlyPickedUp(itemId)) {
+					sendScrollBoxMessage(itemId, currentCount);
+				}
 			}
 		}
 
