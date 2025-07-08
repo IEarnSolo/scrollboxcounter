@@ -11,8 +11,6 @@ import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.events.ItemContainerChanged;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
@@ -83,11 +81,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		if (event.getContainerId() == InventoryID.BANK) {
 			updateBankItems(event.getItemContainer());
 		}
-	}
-
-	public boolean isBankOpen() {
-		Widget bankWidget = client.getWidget(WidgetInfo.BANK_CONTAINER);
-		return bankWidget != null && !bankWidget.isHidden();
 	}
 
 	private void updateBankItems(ItemContainer bank) {

@@ -184,8 +184,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
 
 			if (currentCount > previousCount) {
-				// Send message if inventory count increased and bank is not open
-				if (!plugin.isBankOpen()) {
+				if (!ScrollBoxCounterUtils.isBankOpen(client)) {
 					sendScrollBoxMessage(itemId, currentCount);
 				}
 			}

@@ -10,11 +10,11 @@ public class ScrollBoxCounterUtils {
 
     public static boolean isClueScrollBox(int itemId) {
         return itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_BEGINNER ||
-               itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_EASY ||
-               itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MEDIUM ||
-               itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_HARD ||
-               itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_ELITE ||
-               itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MASTER;
+                itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_EASY ||
+                itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MEDIUM ||
+                itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_HARD ||
+                itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_ELITE ||
+                itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MASTER;
     }
 
     public static String getScrollBoxTierName(int itemId) {
@@ -85,5 +85,9 @@ public class ScrollBoxCounterUtils {
             return 0;
         }
         return inventory.count(itemId);
+    }
+
+    public static boolean isBankOpen(Client client) {
+        return client.getItemContainer(InventoryID.BANK) != null;
     }
 }
