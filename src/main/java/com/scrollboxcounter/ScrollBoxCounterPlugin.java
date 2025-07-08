@@ -4,8 +4,6 @@ import com.google.inject.Provides;
 import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.HashSet;
-import java.util.Set;
 
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -13,9 +11,8 @@ import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.events.ItemContainerChanged;
-import net.runelite.api.events.ItemDespawned;
-import net.runelite.api.events.ItemSpawned;
-import net.runelite.api.TileItem;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
@@ -64,7 +61,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	private ChatMessageManager chatMessageManager;
 
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
-	private final Set<Integer> recentlyPickedUpItems = new HashSet<>();
 
 	@Override
 	protected void startUp() {
@@ -75,7 +71,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	protected void shutDown() {
 		overlayManager.remove(overlay);
 		bankItems.clear();
-		recentlyPickedUpItems.clear();
 	}
 
 	@Provides
@@ -90,24 +85,9 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		}
 	}
 
-	@Subscribe
-	public void onItemSpawned(ItemSpawned event) {
-		TileItem item = event.getItem();
-        if (item != null) {
-            item.getId();
-        }
-    }
-
-	@Subscribe
-	public void onItemDespawned(ItemDespawned event) {
-		TileItem item = event.getItem();
-		if (item != null && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
-			recentlyPickedUpItems.add(item.getId());
-		}
-	}
-
-	public boolean wasRecentlyPickedUp(int itemId) {
-		return recentlyPickedUpItems.remove(itemId);
+	public boolean isBankOpen() {
+		Widget bankWidget = client.getWidget(WidgetInfo.BANK_CONTAINER);
+		return bankWidget != null && !bankWidget.isHidden();
 	}
 
 	private void updateBankItems(ItemContainer bank) {
