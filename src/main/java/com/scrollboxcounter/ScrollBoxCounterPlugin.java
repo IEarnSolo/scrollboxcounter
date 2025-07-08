@@ -30,7 +30,6 @@ import net.runelite.client.ui.overlay.OverlayManager;
 	name = "Scroll Box Counter"
 )
 public class ScrollBoxCounterPlugin extends Plugin {
-	// Clue Scroll Box Item IDs
 	public static final int CLUE_SCROLL_BOX_BEGINNER = 24361;
 	public static final int CLUE_SCROLL_BOX_EASY = 24362;
 	public static final int CLUE_SCROLL_BOX_MEDIUM = 24363;
@@ -38,7 +37,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	public static final int CLUE_SCROLL_BOX_ELITE = 24365;
 	public static final int CLUE_SCROLL_BOX_MASTER = 24366;
 
-	// Scroll Case Upgrade Varbits
 	public static final int SCROLL_CASE_BEGINNER_MINOR = 16565;
 	public static final int SCROLL_CASE_BEGINNER_MAJOR = 16566;
 	public static final int SCROLL_CASE_EASY_MINOR = 16567;
@@ -85,9 +83,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		return configManager.getConfig(ScrollBoxCounterConfig.class);
 	}
 
-	/**
-	 * Handles bank container changes to track clue scroll box quantities.
-	 */
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event) {
 		if (event.getContainerId() == InventoryID.BANK) {
@@ -95,39 +90,26 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		}
 	}
 
-	/**
-	 * Tracks when scroll boxes are spawned on the ground.
-	 */
 	@Subscribe
 	public void onItemSpawned(ItemSpawned event) {
 		TileItem item = event.getItem();
-		if (item != null && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
-			// We don't need to track spawned items, just despawned ones
-		}
-	}
+        if (item != null) {
+            item.getId();
+        }
+    }
 
-	/**
-	 * Tracks when scroll boxes disappear from the ground (likely picked up).
-	 */
 	@Subscribe
 	public void onItemDespawned(ItemDespawned event) {
 		TileItem item = event.getItem();
 		if (item != null && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
-			// Mark this item as recently picked up from ground
 			recentlyPickedUpItems.add(item.getId());
 		}
 	}
 
-	/**
-	 * Checks if an item was recently picked up from the ground.
-	 */
 	public boolean wasRecentlyPickedUp(int itemId) {
 		return recentlyPickedUpItems.remove(itemId);
 	}
 
-	/**
-	 * Updates the cached bank items for clue scroll boxes.
-	 */
 	private void updateBankItems(ItemContainer bank) {
 		bankItems.entrySet().removeIf(entry -> ScrollBoxCounterUtils.isClueScrollBox(entry.getKey()));
 
@@ -142,9 +124,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		}
 	}
 
-	/**
-	 * Gets the count of a specific clue scroll box in the bank.
-	 */
 	public int getBankCount(int itemId) {
 		return bankItems.getOrDefault(itemId, 0);
 	}

@@ -8,9 +8,6 @@ public class ScrollBoxCounterUtils {
 
     private static final int BASE_CLUE_COUNT = 2;
 
-    /**
-     * Checks if the given item ID is a clue scroll box.
-     */
     public static boolean isClueScrollBox(int itemId) {
         return itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_BEGINNER ||
                itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_EASY ||
@@ -20,9 +17,6 @@ public class ScrollBoxCounterUtils {
                itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MASTER;
     }
 
-    /**
-     * Gets tier name for scroll box.
-     */
     public static String getScrollBoxTierName(int itemId) {
         switch (itemId) {
             case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_BEGINNER:
@@ -42,18 +36,12 @@ public class ScrollBoxCounterUtils {
         }
     }
 
-    /**
-     * Calculates the maximum clue count based on scroll case upgrades.
-     */
     public static int getMaxClueCount(int itemId, Client client) {
         int tierBonus = getTierBonus(itemId, client);
         int mimicBonus = getMimicBonus(client);
         return BASE_CLUE_COUNT + tierBonus + mimicBonus;
     }
 
-    /**
-     * Gets the tier-specific bonus from scroll case upgrades.
-     */
     public static int getTierBonus(int itemId, Client client) {
         int bonus = 0;
 
@@ -87,16 +75,10 @@ public class ScrollBoxCounterUtils {
         return bonus;
     }
 
-    /**
-     * Gets the mimic bonus from scroll case upgrades.
-     */
     public static int getMimicBonus(Client client) {
         return client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_MIMIC);
     }
 
-    /**
-     * Gets the inventory count for a specific item.
-     */
     public static int getInventoryCount(int itemId, Client client) {
         ItemContainer inventory = client.getItemContainer(InventoryID.INV);
         if (inventory == null) {
@@ -105,4 +87,3 @@ public class ScrollBoxCounterUtils {
         return inventory.count(itemId);
     }
 }
-

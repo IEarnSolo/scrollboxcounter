@@ -7,9 +7,6 @@ import net.runelite.client.config.ConfigItem;
 @ConfigGroup("scrollboxcounter")
 public interface ScrollBoxCounterConfig extends Config
 {
-	/**
-	 * Position options for displaying the maximum clue scroll count.
-	 */
 	enum MaxCluePosition
 	{
 		DISABLED("Disabled"),
