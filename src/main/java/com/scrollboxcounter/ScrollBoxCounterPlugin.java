@@ -71,7 +71,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	@Override
 	protected void startUp() {
 		overlayManager.add(overlay);
-		sendChatMessage("Scroll Box Counter plugin started! It will now track your clue scroll boxes in the bank and inventory.");
 	}
 
 	@Override
@@ -84,18 +83,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	@Provides
 	ScrollBoxCounterConfig provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(ScrollBoxCounterConfig.class);
-	}
-
-	/**
-	 * Checks if the given item ID is a clue scroll box.
-	 */
-	public static boolean isClueScrollBox(int itemId) {
-		return itemId == CLUE_SCROLL_BOX_BEGINNER ||
-				itemId == CLUE_SCROLL_BOX_EASY ||
-				itemId == CLUE_SCROLL_BOX_MEDIUM ||
-				itemId == CLUE_SCROLL_BOX_HARD ||
-				itemId == CLUE_SCROLL_BOX_ELITE ||
-				itemId == CLUE_SCROLL_BOX_MASTER;
 	}
 
 	/**
@@ -114,7 +101,7 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	@Subscribe
 	public void onItemSpawned(ItemSpawned event) {
 		TileItem item = event.getItem();
-		if (item != null && isClueScrollBox(item.getId())) {
+		if (item != null && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
 			// We don't need to track spawned items, just despawned ones
 		}
 	}
@@ -125,7 +112,7 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	@Subscribe
 	public void onItemDespawned(ItemDespawned event) {
 		TileItem item = event.getItem();
-		if (item != null && isClueScrollBox(item.getId())) {
+		if (item != null && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
 			// Mark this item as recently picked up from ground
 			recentlyPickedUpItems.add(item.getId());
 		}
@@ -142,12 +129,12 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	 * Updates the cached bank items for clue scroll boxes.
 	 */
 	private void updateBankItems(ItemContainer bank) {
-		bankItems.entrySet().removeIf(entry -> isClueScrollBox(entry.getKey()));
+		bankItems.entrySet().removeIf(entry -> ScrollBoxCounterUtils.isClueScrollBox(entry.getKey()));
 
 		if (bank != null) {
 			Item[] items = bank.getItems();
 			for (Item item : items) {
-				if (item != null && item.getId() != -1 && item.getQuantity() > 0 && isClueScrollBox(item.getId())) {
+				if (item != null && item.getId() != -1 && item.getQuantity() > 0 && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
 						bankItems.put(item.getId(), item.getQuantity());
 					}
 

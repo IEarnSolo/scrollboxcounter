@@ -18,8 +18,6 @@ import java.util.Map;
  */
 public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 {
-	private static final int BASE_CLUE_COUNT = 2;
-
 	private final ScrollBoxCounterConfig config;
 	private final Client client;
 	private final ScrollBoxCounterPlugin plugin;
@@ -35,13 +33,12 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		this.plugin = plugin;
 		showOnInventory();
 		showOnBank();
-		// Don't call updatePreviousInventoryCounts() here - it will be called on first render
 	}
 
 	@Override
 	public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem widgetItem)
 	{
-		if (!ScrollBoxCounterPlugin.isClueScrollBox(itemId))
+		if (!ScrollBoxCounterUtils.isClueScrollBox(itemId))
 		{
 			return;
 		}
@@ -72,14 +69,14 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		}
 
 		boolean isInBank = isItemInBank(widgetItem);
-		int maxClues = getMaxClueCount(itemId);
+		int maxClues = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
 		int bankCount = plugin.getBankCount(itemId);
 
 		// Calculate total count for color determination
 		int totalCount = quantity + (isInBank ? 0 : bankCount);
 		if (isInBank)
 		{
-			int inventoryCount = getInventoryCount(itemId);
+			int inventoryCount = ScrollBoxCounterUtils.getInventoryCount(itemId, client);
 			totalCount = quantity + inventoryCount;
 		}
 
@@ -196,76 +193,6 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 	}
 
 	/**
-	 * Calculates the maximum clue count based on scroll case upgrades.
-	 */
-	private int getMaxClueCount(int itemId)
-	{
-        int tierBonus = getTierBonus(itemId);
-		int mimicBonus = getMimicBonus();
-
-		return BASE_CLUE_COUNT + tierBonus + mimicBonus;
-	}
-
-	/**
-	 * Gets the tier-specific bonus from scroll case upgrades.
-	 */
-	private int getTierBonus(int itemId)
-	{
-		int bonus = 0;
-
-		switch (itemId)
-		{
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_BEGINNER:
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_BEGINNER_MINOR);
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_BEGINNER_MAJOR);
-				break;
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_EASY:
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_EASY_MINOR);
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_EASY_MAJOR);
-				break;
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MEDIUM:
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_MEDIUM_MINOR);
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_MEDIUM_MAJOR);
-				break;
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_HARD:
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_HARD_MINOR);
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_HARD_MAJOR);
-				break;
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_ELITE:
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_ELITE_MINOR);
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_ELITE_MAJOR);
-				break;
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MASTER:
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_MASTER_MINOR);
-				bonus += client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_MASTER_MAJOR);
-				break;
-        }
-
-		return bonus;
-	}
-
-	/**
-	 * Gets the mimic bonus from scroll case upgrades.
-	 */
-	private int getMimicBonus()
-	{
-		return client.getVarbitValue(ScrollBoxCounterPlugin.SCROLL_CASE_MIMIC);
-	}
-
-	/**
-	 * Gets the inventory count for a specific item.
-	 */
-	private int getInventoryCount(int itemId)
-	{
-		net.runelite.api.ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		if (inventory == null)
-		{
-			return 0;
-		}
-		return inventory.count(itemId);
-	}
-
-	/**
 	 * Checks if scroll box quantities in inventory have changed.
 	 */
 	private void checkInventoryChanges() {
@@ -277,7 +204,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		// Count current inventory scroll boxes
 		Map<Integer, Integer> currentCounts = new HashMap<>();
 		for (Item item : inventory.getItems()) {
-			if (item != null && item.getId() != -1 && ScrollBoxCounterPlugin.isClueScrollBox(item.getId())) {
+			if (item != null && item.getId() != -1 && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
 				currentCounts.put(item.getId(), item.getQuantity());
 			}
 		}
@@ -305,35 +232,13 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 	 * Sends chat message when scroll box is picked up.
 	 */
 	private void sendScrollBoxMessage(int itemId, int inventoryCount) {
-		String tierName = getScrollBoxTierName(itemId);
+		String tierName = ScrollBoxCounterUtils.getScrollBoxTierName(itemId);
 		int bankCount = plugin.getBankCount(itemId);
 		int totalCount = inventoryCount + bankCount;
-		int maxCount = getMaxClueCount(itemId);
+		int maxCount = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
 
 		String message = "Holding " + totalCount + "/" + maxCount + " scroll boxes (" + tierName + ")";
 		plugin.sendChatMessage(message);
-	}
-
-	/**
-	 * Gets tier name for scroll box.
-	 */
-	private String getScrollBoxTierName(int itemId) {
-		switch (itemId) {
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_BEGINNER:
-				return "Beginner";
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_EASY:
-				return "Easy";
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MEDIUM:
-				return "Medium";
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_HARD:
-				return "Hard";
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_ELITE:
-				return "Elite";
-			case ScrollBoxCounterPlugin.CLUE_SCROLL_BOX_MASTER:
-				return "Master";
-			default:
-				return "Unknown";
-		}
 	}
 
 	/**
@@ -347,7 +252,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 
 		previousInventoryCounts.clear();
 		for (Item item : inventory.getItems()) {
-			if (item != null && item.getId() != -1 && ScrollBoxCounterPlugin.isClueScrollBox(item.getId())) {
+			if (item != null && item.getId() != -1 && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
 				previousInventoryCounts.put(item.getId(), item.getQuantity());
 			}
 		}
