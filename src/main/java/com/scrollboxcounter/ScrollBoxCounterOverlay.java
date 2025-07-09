@@ -184,7 +184,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
 
 			if (currentCount > previousCount) {
-				if (!ScrollBoxCounterUtils.isBankOpen(client)) {
+				if (!ScrollBoxCounterUtils.isBankOpen(client) && config.showChatMessages()) {
 					sendScrollBoxMessage(itemId, currentCount);
 				}
 			}

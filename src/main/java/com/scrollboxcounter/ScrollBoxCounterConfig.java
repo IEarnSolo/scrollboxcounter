@@ -56,4 +56,13 @@ public interface ScrollBoxCounterConfig extends Config
 	{
 		return false;
 	}
+
+	@ConfigItem(
+		keyName = "showChatMessages",
+		name = "Show Chat Messages",
+		description = "Show chat messages when clue scroll boxes are picked up or appear in the inventory"
+	)
+	default boolean showChatMessages() {
+		return true;
+	}
 }
