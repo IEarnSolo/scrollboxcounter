@@ -27,5 +27,5 @@ Access the plugin settings through RuneLite's plugin panel:
 - **Mark Full Stacks**: Enable red highlighting when at maximum capacity
 - **Max Clue Scrolls Position**: Toggle the counter display on/off and choose its position (left or right)
 - **Show Banked Count**: Display the number of clue scroll boxes in your bank
-
+- **Show Game Chat Message**: Enable or disable the game chat message when receiving a clue scroll box
 ![Plugin configuration panel](config.png)
