@@ -1,8 +1,11 @@
 package com.scrollboxcounter;
 
 import net.runelite.api.Client;
-import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.ItemContainer;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.gameval.ItemID;
+import net.runelite.client.game.ItemManager;
 
 public class ScrollBoxCounterUtils {
 
@@ -40,6 +43,61 @@ public class ScrollBoxCounterUtils {
         int tierBonus = getTierBonus(itemId, client);
         int mimicBonus = getMimicBonus(client);
         return BASE_CLUE_COUNT + tierBonus + mimicBonus;
+    }
+
+    public static int getActiveClueScrollCount(int scrollBoxItemId, Client client, ItemManager itemManager, ScrollBoxCounterPlugin plugin) {
+        String tier = getScrollBoxTierName(scrollBoxItemId);
+        int inventoryCount = getActiveClueScrollsInContainer(client.getItemContainer(InventoryID.INV), tier, itemManager);
+
+        ItemContainer bankContainer = client.getItemContainer(InventoryID.BANK);
+        int bankCount;
+        if (bankContainer != null) {
+            bankCount = getActiveClueScrollsInContainer(bankContainer, tier, itemManager);
+        } else {
+            bankCount = plugin.getBankActiveClueScrollCount(scrollBoxItemId);
+        }
+
+        return inventoryCount + bankCount;
+    }
+
+    public static int getActiveClueScrollsInContainer(ItemContainer container, String tier, ItemManager itemManager) {
+        if (container == null) {
+            return 0;
+        }
+
+        boolean hasActiveClueForTier = false;
+        for (Item item : container.getItems()) {
+            if (item != null && item.getId() != -1 && isActiveClueScroll(item.getId(), tier, itemManager)) {
+                hasActiveClueForTier = true;
+                break;
+            }
+        }
+
+        return hasActiveClueForTier ? 1 : 0;
+    }
+
+    public static boolean isActiveClueScroll(int itemId, String tier, ItemManager itemManager) {
+        if (tier.equals("Beginner") && itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_BEGINNER) {
+            return true;
+        }
+        if (tier.equals("Master") && (itemId == ScrollBoxCounterPlugin.CLUE_SCROLL_MASTER || itemId == ItemID.TRAIL_MASTER_PART1)) {
+            return true;
+        }
+
+        try {
+            String itemName = itemManager.getItemComposition(itemId).getMembersName();
+            if (itemName == null) {
+                return false;
+            }
+
+            String lowerName = itemName.toLowerCase();
+            String tierLower = tier.toLowerCase();
+
+            return lowerName.contains("clue scroll (" + tierLower + ")") ||
+                   lowerName.contains("challenge scroll (" + tierLower + ")");
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static int getTierBonus(int itemId, Client client) {

@@ -66,6 +66,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		boolean isInBank = isItemInBank(widgetItem);
 		int maxClues = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
 		int bankCount = plugin.getBankCount(itemId);
+		int activeClueScrolls = ScrollBoxCounterUtils.getActiveClueScrollCount(itemId, client, plugin.getItemManager(), plugin);
 
 		int totalCount = quantity + (isInBank ? 0 : bankCount);
 		if (isInBank)
@@ -74,7 +75,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			totalCount = quantity + inventoryCount;
 		}
 
-		boolean isFullStack = config.markFullStacks() && totalCount >= maxClues;
+		boolean isFullStack = config.markFullStacks() && (totalCount + activeClueScrolls) >= maxClues;
 
 		if (config.maxCluePosition() == ScrollBoxCounterConfig.MaxCluePosition.DISABLED && !config.showBanked() && !isFullStack)
 		{
@@ -107,9 +108,11 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		if (config.showBanked() && !isInBank)
 		{
 			int bankCount = plugin.getBankCount(currentItemId);
-			if (bankCount > 0)
+			int bankActiveClues = plugin.getBankActiveClueScrollCount(currentItemId);
+			int totalBanked = bankCount + bankActiveClues;
+			if (totalBanked > 0)
 			{
-				renderBankedQuantity(graphics, bounds, bankCount, textColor);
+				renderBankedQuantity(graphics, bounds, totalBanked, textColor);
 			}
 		}
 	}
@@ -183,11 +186,10 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			int currentCount = entry.getValue();
 			int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
 
-			if (currentCount > previousCount) {
-				if (!ScrollBoxCounterUtils.isBankOpen(client) && config.showChatMessages()) {
+			if (currentCount > previousCount && !ScrollBoxCounterUtils.isBankOpen(client) && config.showChatMessages()) {
 					sendScrollBoxMessage(itemId, currentCount);
 				}
-			}
+
 		}
 
 		previousInventoryCounts.clear();
@@ -195,14 +197,18 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 	}
 
 	private void sendScrollBoxMessage(int itemId, int inventoryCount) {
-		String tierName = ScrollBoxCounterUtils.getScrollBoxTierName(itemId);
-		int bankCount = plugin.getBankCount(itemId);
-		int totalCount = inventoryCount + bankCount;
-		int maxCount = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
+        String tierName = ScrollBoxCounterUtils.getScrollBoxTierName(itemId);
+        int bankCount = plugin.getBankCount(itemId);
+        int bankActiveClues = plugin.getBankActiveClueScrollCount(itemId);
+        int inventoryActiveClues = ScrollBoxCounterUtils.getActiveClueScrollsInContainer(
+            client.getItemContainer(InventoryID.INV), tierName, plugin.getItemManager());
 
-		String message = "Holding " + totalCount + "/" + maxCount + " scroll boxes (" + tierName + ")";
-		plugin.sendChatMessage(message);
-	}
+        int totalCount = inventoryCount + bankCount + bankActiveClues + inventoryActiveClues;
+        int maxCount = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
+
+        String message = "Holding " + totalCount + "/" + maxCount + " scroll boxes / clues (" + tierName + ")";
+        plugin.sendChatMessage(message);
+    }
 
 	private void updatePreviousInventoryCounts() {
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
