@@ -80,6 +80,7 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	private boolean suppressChatMessage = false;
 	private boolean usePendingBankItems = false;
 	private boolean suppressChatOnStartup = true;
+	private boolean wasBankOpenLastTick = false;
 
 	@Override
 	protected void startUp() {
@@ -132,6 +133,7 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		usePendingBankItems = false;
 		suppressChatMessage = false;
 		suppressChatOnStartup = false;
+		wasBankOpenLastTick = ScrollBoxCounterUtils.isBankOpen(client);
 	}
 
 	private void updateBankItems(ItemContainer bank) {
@@ -212,8 +214,7 @@ public class ScrollBoxCounterPlugin extends Plugin {
 				int currentCount = entry.getValue();
 				int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
 
-				if (currentCount > previousCount && previousCount > 0) {
-
+				if (currentCount > previousCount && wasBankOpenLastTick) {
 					int withdrawn = currentCount - previousCount;
 					int oldBank = bankItems.getOrDefault(itemId, 0);
 					int newBank = Math.max(0, oldBank - withdrawn);
