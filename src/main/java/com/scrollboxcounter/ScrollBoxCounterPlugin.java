@@ -8,6 +8,7 @@ import java.util.Map;
 
 import lombok.Getter;
 import net.runelite.api.ChatMessageType;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
@@ -25,7 +26,6 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.api.Client;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.widgets.WidgetID;
 
 @PluginDescriptor(
 	name = "Scroll Box Counter"
@@ -76,7 +76,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	private final Map<Integer, Integer> previousInventoryCounts = new HashMap<>();
 	private boolean bankJustClosed = false;
 	private boolean bankVisited = false;
-	private boolean skipNextOverlay = false;
 	private boolean suppressChatMessage = false;
 	private boolean usePendingBankItems = false;
 	private boolean suppressChatOnStartup = true;
@@ -116,9 +115,8 @@ public class ScrollBoxCounterPlugin extends Plugin {
 
 	@Subscribe
 	public void onWidgetClosed(WidgetClosed event) {
-		if (event.getGroupId() == WidgetID.BANK_GROUP_ID) {
+		if (event.getGroupId() == InterfaceID.BANKMAIN) {
 			bankJustClosed = true;
-			skipNextOverlay = false;
 			suppressChatMessage = true;
 			usePendingBankItems = true;
 		}
@@ -164,10 +162,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 			}
 		}
 		return false;
-	}
-
-	public int getBankCount(int itemId) {
-		return bankItems.getOrDefault(itemId, 0);
 	}
 
 	public void sendChatMessage(String chatMessage)
@@ -236,13 +230,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		previousInventoryCounts.putAll(currentCounts);
 	}
 
-	private int getInventoryCount(int itemId) {
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		if (inventory == null) {
-			return 0;
-		}
-		return inventory.count(itemId);
-	}
 
 	private void sendScrollBoxMessage(int itemId, int inventoryCount) {
 		String tierName = ScrollBoxCounterUtils.getScrollBoxTierName(itemId);
@@ -261,9 +248,6 @@ public class ScrollBoxCounterPlugin extends Plugin {
 		return bankVisited;
 	}
 
-	public boolean shouldSkipNextOverlay() {
-		return skipNextOverlay;
-	}
 
 	public int getOverlayBankCount(int itemId) {
 		return bankItems.getOrDefault(itemId, 0);
