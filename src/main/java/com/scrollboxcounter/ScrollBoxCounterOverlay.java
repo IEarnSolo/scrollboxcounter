@@ -30,6 +30,9 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 	@Override
 	public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem widgetItem)
 	{
+		if (plugin.isUsingPendingBankItems() && !ScrollBoxCounterUtils.isClueScrollBox(itemId)) {
+			return;
+		}
 		if (!ScrollBoxCounterUtils.isClueScrollBox(itemId))
 		{
 			return;
@@ -51,7 +54,7 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 
 		boolean isInBank = isItemInBank(widgetItem);
 		int maxClues = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
-		int bankCount = plugin.getBankCount(itemId);
+		int bankCount = plugin.getOverlayBankCount(itemId);
 		int activeClueScrolls = ScrollBoxCounterUtils.getActiveClueScrollCount(itemId, client, plugin.getItemManager(), plugin);
 
 		int totalCount = quantity + (isInBank ? 0 : bankCount);
@@ -91,9 +94,9 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 			renderMaxClues(graphics, bounds, maxClues, textColor, config.maxCluePosition());
 		}
 
-		if (config.showBanked() && !isInBank)
+		if (config.showBanked() && !isInBank && plugin.hasVisitedBank())
 		{
-			int bankCount = plugin.getBankCount(currentItemId);
+			int bankCount = plugin.getOverlayBankCount(currentItemId);
 			int bankActiveClues = plugin.getBankActiveClueScrollCount(currentItemId);
 			int totalBanked = bankCount + bankActiveClues;
 			if (totalBanked > 0)
