@@ -39,3 +39,6 @@ Access the plugin settings through RuneLite's plugin panel:
 - **Show Game Chat Message**: Enable or disable the game chat message when receiving a clue scroll box
 
 ![Plugin configuration panel](config.png)
+
+## Contributing
+Contributions are welcome! If you have suggestions or improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/thelaakes/scrollboxcounter).
