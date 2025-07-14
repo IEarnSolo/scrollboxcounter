@@ -1,6 +1,7 @@
 package com.scrollboxcounter;
 
 import com.google.inject.Provides;
+import java.util.Objects;
 import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +22,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.game.ItemManager;
+import net.runelite.api.Client;
 
 @PluginDescriptor(
 	name = "Scroll Box Counter"
@@ -63,8 +65,12 @@ public class ScrollBoxCounterPlugin extends Plugin {
     @Inject
 	private ItemManager itemManager;
 
+	@Inject
+	private Client client;
+
 	private final Map<Integer, Integer> bankItems = new HashMap<>();
 	private final Map<Integer, Integer> bankActiveClueScrolls = new HashMap<>();
+	private final Map<Integer, Integer> previousInventoryCounts = new HashMap<>();
 
 	@Override
 	protected void startUp() {
@@ -87,6 +93,9 @@ public class ScrollBoxCounterPlugin extends Plugin {
 	public void onItemContainerChanged(ItemContainerChanged event) {
 		if (event.getContainerId() == InventoryID.BANK) {
 			updateBankItems(event.getItemContainer());
+		}
+		if (event.getContainerId() == InventoryID.INV) {
+			checkInventoryChanges(event.getItemContainer());
 		}
 	}
 
@@ -149,4 +158,42 @@ public class ScrollBoxCounterPlugin extends Plugin {
 
         return 0;
     }
+
+	private void checkInventoryChanges(ItemContainer inventory) {
+		if (inventory == null) {
+			return;
+		}
+		Map<Integer, Integer> currentCounts = new HashMap<>();
+		for (Item item : inventory.getItems()) {
+			if (item != null && item.getId() != -1 && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
+				currentCounts.put(item.getId(), item.getQuantity());
+			}
+		}
+		for (Map.Entry<Integer, Integer> entry : currentCounts.entrySet()) {
+			int itemId = entry.getKey();
+			int currentCount = entry.getValue();
+			int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
+			if (currentCount > previousCount && !ScrollBoxCounterUtils.isBankOpen(client) && Objects.requireNonNull(getConfig()).showChatMessages()) {
+				sendScrollBoxMessage(itemId, currentCount);
+			}
+		}
+		previousInventoryCounts.clear();
+		previousInventoryCounts.putAll(currentCounts);
+	}
+
+	private void sendScrollBoxMessage(int itemId, int inventoryCount) {
+		String tierName = ScrollBoxCounterUtils.getScrollBoxTierName(itemId);
+		int bankCount = getBankCount(itemId);
+		int bankActiveClues = getBankActiveClueScrollCount(itemId);
+		int inventoryActiveClues = ScrollBoxCounterUtils.getActiveClueScrollsInContainer(
+			client.getItemContainer(InventoryID.INV), tierName, itemManager);
+		int totalCount = inventoryCount + bankCount + bankActiveClues + inventoryActiveClues;
+		int maxCount = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
+		String message = "Holding " + totalCount + "/" + maxCount + " scroll boxes / clues (" + tierName + ")";
+		sendChatMessage(message);
+	}
+
+	private ScrollBoxCounterConfig getConfig() {
+		return overlay != null ? overlay.getConfig() : null;
+	}
 }

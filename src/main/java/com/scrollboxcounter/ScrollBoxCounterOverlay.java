@@ -1,26 +1,21 @@
 package com.scrollboxcounter;
 
 import com.google.inject.Inject;
+import lombok.Getter;
 import net.runelite.api.Client;
-import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.widgets.WidgetItem;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.Item;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
 
 import java.awt.*;
-import java.util.HashMap;
-import java.util.Map;
 
 public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 {
+	@Getter
 	private final ScrollBoxCounterConfig config;
 	private final Client client;
 	private final ScrollBoxCounterPlugin plugin;
 	private int currentItemId;
-	private final Map<Integer, Integer> previousInventoryCounts = new HashMap<>();
-	private boolean initializedInventoryTracking = false;
 
 	@Inject
 	ScrollBoxCounterOverlay(ScrollBoxCounterConfig config, Client client, ScrollBoxCounterPlugin plugin)
@@ -41,15 +36,6 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		}
 
 		this.currentItemId = itemId;
-
-		if (!initializedInventoryTracking) {
-			updatePreviousInventoryCounts();
-			initializedInventoryTracking = true;
-		}
-
-		if (!isItemInBank(widgetItem)) {
-			checkInventoryChanges();
-		}
 
 		final Rectangle bounds = widgetItem.getCanvasBounds();
 		if (bounds == null)
@@ -168,59 +154,4 @@ public class ScrollBoxCounterOverlay extends WidgetItemOverlay
 		graphics.drawString(bankedText, x, y);
 	}
 
-	private void checkInventoryChanges() {
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		if (inventory == null) {
-			return;
-		}
-
-		Map<Integer, Integer> currentCounts = new HashMap<>();
-		for (Item item : inventory.getItems()) {
-			if (item != null && item.getId() != -1 && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
-				currentCounts.put(item.getId(), item.getQuantity());
-			}
-		}
-
-		for (Map.Entry<Integer, Integer> entry : currentCounts.entrySet()) {
-			int itemId = entry.getKey();
-			int currentCount = entry.getValue();
-			int previousCount = previousInventoryCounts.getOrDefault(itemId, 0);
-
-			if (currentCount > previousCount && !ScrollBoxCounterUtils.isBankOpen(client) && config.showChatMessages()) {
-					sendScrollBoxMessage(itemId, currentCount);
-				}
-
-		}
-
-		previousInventoryCounts.clear();
-		previousInventoryCounts.putAll(currentCounts);
-	}
-
-	private void sendScrollBoxMessage(int itemId, int inventoryCount) {
-        String tierName = ScrollBoxCounterUtils.getScrollBoxTierName(itemId);
-        int bankCount = plugin.getBankCount(itemId);
-        int bankActiveClues = plugin.getBankActiveClueScrollCount(itemId);
-        int inventoryActiveClues = ScrollBoxCounterUtils.getActiveClueScrollsInContainer(
-            client.getItemContainer(InventoryID.INV), tierName, plugin.getItemManager());
-
-        int totalCount = inventoryCount + bankCount + bankActiveClues + inventoryActiveClues;
-        int maxCount = ScrollBoxCounterUtils.getMaxClueCount(itemId, client);
-
-        String message = "Holding " + totalCount + "/" + maxCount + " scroll boxes / clues (" + tierName + ")";
-        plugin.sendChatMessage(message);
-    }
-
-	private void updatePreviousInventoryCounts() {
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		if (inventory == null) {
-			return;
-		}
-
-		previousInventoryCounts.clear();
-		for (Item item : inventory.getItems()) {
-			if (item != null && item.getId() != -1 && ScrollBoxCounterUtils.isClueScrollBox(item.getId())) {
-				previousInventoryCounts.put(item.getId(), item.getQuantity());
-			}
-		}
-	}
 }
