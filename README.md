@@ -13,7 +13,7 @@
 - Banked: How many clues you have in the bank
 - Current total: How many clues you have across your inventory and bank
 - Stack limit: How many clues of that tier you can currently hold at one time
-- Next unlock: How many more clues must be completed to increase your stack limit
+- Next increase: How many more clues must be completed to increase your stack limit
 
 ![Screenshot](tooltip-overlay.png)
 <hr/>
