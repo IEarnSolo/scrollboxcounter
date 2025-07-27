@@ -63,12 +63,14 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
 
         if (isScrollBox(itemId) && config.markFullStack())
         {
-            Color textColor = (config.markFullStack() && current >= cap) ? Color.RED : Color.YELLOW;
-            widgetItem.getWidget().setItemQuantityMode(ItemQuantityMode.NEVER);
-            renderQuantity(graphics, widgetItem.getCanvasBounds(), widgetItem.getQuantity(), textColor);
+            if(widgetItem.getQuantity() != Integer.MAX_VALUE) {
+                // ^ Fixes weird bug with "(base runelite) bank tag layout" displaying max integer on fake scroll box placeholder
+                Color textColor = (config.markFullStack() && current >= cap) ? Color.RED : Color.YELLOW;
+                widgetItem.getWidget().setItemQuantityMode(ItemQuantityMode.NEVER);
+                renderQuantity(graphics, widgetItem.getCanvasBounds(), widgetItem.getQuantity(), textColor);
+            }
         }
 
-        // Render tier label in bottom-left corner
         if (config.showTierLabel() && tier != null)
         {
             String tierName = clueUtils.getFormattedTierName(tier);
@@ -109,7 +111,7 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
 
             final TextComponent label = new TextComponent();
             label.setText(tierName);
-            label.setColor(tierColor); // use config color
+            label.setColor(tierColor);
             label.setPosition(new java.awt.Point(bounds.x, bounds.y + bounds.height));
             label.setFont(FontManager.getRunescapeSmallFont());
             label.render(graphics);
@@ -125,7 +127,6 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
         {
             renderPositionedText(graphics, bounds, "+" + banked, Color.WHITE, config.showBankedPosition());
         }
-
 
         if (config.showStackLimitPosition() != ScrollBoxInfoConfig.TextPosition.OFF)
         {
