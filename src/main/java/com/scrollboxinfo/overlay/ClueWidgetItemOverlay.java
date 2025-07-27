@@ -117,10 +117,15 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
 
         int banked = storage.getBankCount(tier);
 
-        if (banked > 0 && config.showBankedPosition() != ScrollBoxInfoConfig.TextPosition.OFF)
+        Widget bankWidget = widgetItem.getWidget();
+        if (banked > 0
+                && config.showBankedPosition() != ScrollBoxInfoConfig.TextPosition.OFF
+                && bankWidget != null
+                && bankWidget.getId() != ComponentID.BANK_ITEM_CONTAINER)
         {
             renderPositionedText(graphics, bounds, "+" + banked, Color.WHITE, config.showBankedPosition());
         }
+
 
         if (config.showStackLimitPosition() != ScrollBoxInfoConfig.TextPosition.OFF)
         {

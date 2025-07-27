@@ -252,10 +252,11 @@ public class ScrollBoxInfoPlugin extends Plugin
 
 				clueCountStorage.setBankCount(tier, bankCount);
 			} else if (bankWasOpenLastTick || depositBoxIsOpen || depositBoxWasOpenLastTick) {
-				if (scrollBoxLeftInv)
-					assumedBankedScrollBoxCount += 1;
-				else if (scrollBoxEnteredInv)
-					assumedBankedScrollBoxCount -= 1;
+				int currentCount = inventory.scrollBoxCount();
+				int previousCount = previousInventoryScrollBoxCount.getOrDefault(tier, 0);
+				int delta = previousCount - currentCount;
+
+				assumedBankedScrollBoxCount += delta;
 
 				if (clueEnteredInv) {
 					bankedClueScroll = false;
