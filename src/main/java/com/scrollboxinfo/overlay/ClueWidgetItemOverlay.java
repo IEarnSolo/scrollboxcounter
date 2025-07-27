@@ -280,8 +280,13 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
             {
                 if (child != null && child.getItemId() > 0 && isScrollBox(child.getItemId()))
                 {
-                    child.setItemQuantityMode(ItemQuantityMode.ALWAYS);
+                if (child.getItemQuantity() != Integer.MAX_VALUE)
+                // ^ Fixes weird bug with "(base runelite) bank tag layout" displaying max integer on fake scroll box placeholder
+                    {
+                        child.setItemQuantityMode(ItemQuantityMode.ALWAYS);
+                    }
                 }
+
             }
         }
     }
