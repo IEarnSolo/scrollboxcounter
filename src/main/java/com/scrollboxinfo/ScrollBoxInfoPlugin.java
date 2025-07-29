@@ -8,8 +8,7 @@ import com.scrollboxinfo.overlay.ClueWidgetItemOverlay;
 import com.scrollboxinfo.overlay.StackLimitInfoBox;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.MenuEntryAdded;
+import net.runelite.api.events.*;
 import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
@@ -20,11 +19,11 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
-import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.InventoryID;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 
 import java.awt.image.BufferedImage;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -74,6 +73,9 @@ public class ScrollBoxInfoPlugin extends Plugin
 	private final Map<ClueTier, Boolean> previousBankChallengeScrollState = new HashMap<>();
 	private final Map<ClueTier, Integer> previousTotalClueCounts = new HashMap<>();
 	private final Map<ClueTier, StackLimitInfoBox> stackInfoBoxes = new HashMap<>();
+	private final Map<ClueTier, Integer> recentlyDropped = new EnumMap<>(ClueTier.class);
+	private final Map<ClueTier, Integer> recentlyPickedUp = new EnumMap<>(ClueTier.class);
+
 
 	private void checkAndDisplayInfobox(ClueTier tier, int count, int cap) {
 		if (!config.showFullStackInfobox() || !isTierInfoboxEnabled(tier)) {
@@ -144,6 +146,11 @@ public class ScrollBoxInfoPlugin extends Plugin
 	{
 		clueCountStorage.loadBankCountsFromConfig();
 		overlayManager.add(clueWidgetItemOverlay);
+		for (ClueTier tier : ClueTier.values())
+		{
+			recentlyPickedUp.clear();
+			recentlyDropped.clear();
+		}
 	}
 
 	@Override
@@ -218,10 +225,6 @@ public class ScrollBoxInfoPlugin extends Plugin
 			boolean bankedClueScroll = previousBankClueScrollState.getOrDefault(tier, false);
 			boolean bankedChallengeScroll = previousBankChallengeScrollState.getOrDefault(tier, false);
 			int assumedBankedScrollBoxCount = previousBankScrollBoxCount.getOrDefault(tier, 0);
-			boolean hasScrollInBank = Boolean.TRUE.equals(
-					configManager.getRSProfileConfiguration("scrollboxinfo", "hasClueOrChallengeScrollInBank_" + tier.name(), Boolean.class)
-			);
-
 
 			int count = inventory.scrollBoxCount();
 			if (inventory.hasClueScroll())
@@ -251,46 +254,63 @@ public class ScrollBoxInfoPlugin extends Plugin
 				}
 
 				clueCountStorage.setBankCount(tier, bankCount);
+				// TODO: handle the case of depositing/withdrawing a clue item and picking up/dropping a clue item in the same tick
 			} else if (bankWasOpenLastTick || depositBoxIsOpen || depositBoxWasOpenLastTick) {
 				int currentCount = inventory.scrollBoxCount();
 				int previousCount = previousInventoryScrollBoxCount.getOrDefault(tier, 0);
 				int delta = previousCount - currentCount;
 
-				assumedBankedScrollBoxCount += delta;
+				if(!recentlyPickedUp.isEmpty() || !recentlyDropped.isEmpty()) {
 
-				if (clueEnteredInv) {
-					bankedClueScroll = false;
-				} else if (clueLeftInv) {
-					bankedClueScroll = true;
-				}
-				if (challengeEnteredInv) {
-					bankedChallengeScroll = false;
-				} else if (challengeLeftInv) {
-					bankedChallengeScroll = true;
-				}
+					int pickedUp = recentlyPickedUp.getOrDefault(tier, 0);
+					int dropped = recentlyDropped.getOrDefault(tier, 0);
 
-				if (bankedChallengeScroll || bankedClueScroll)
-				{
-					configManager.setRSProfileConfiguration("scrollboxinfo", "hasClueOrChallengeScrollInBank_" + tier.name(), true);
-				}
-				if (!bankedChallengeScroll && !bankedClueScroll)
-				{
-					configManager.setRSProfileConfiguration("scrollboxinfo", "hasClueOrChallengeScrollInBank_" + tier.name(), false);
-				}
+					delta = delta - pickedUp + dropped;
 
-				int assumedBankCount = assumedBankedScrollBoxCount;
-				if (bankedChallengeScroll || bankedClueScroll)
-					assumedBankCount += 1;
+					assumedBankedScrollBoxCount += delta;
+				} else {
+					assumedBankedScrollBoxCount += delta;
 
-				clueCountStorage.setBankCount(tier, assumedBankCount);
+					if (clueEnteredInv) {
+						bankedClueScroll = false;
+					} else if (clueLeftInv) {
+						bankedClueScroll = true;
+					}
+					if (challengeEnteredInv) {
+						bankedChallengeScroll = false;
+					} else if (challengeLeftInv) {
+						bankedChallengeScroll = true;
+					}
+
+					if (bankedChallengeScroll || bankedClueScroll) {
+						configManager.setRSProfileConfiguration("scrollboxinfo", "hasClueOrChallengeScrollInBank_" + tier.name(), true);
+					}
+					if (!bankedChallengeScroll && !bankedClueScroll) {
+						configManager.setRSProfileConfiguration("scrollboxinfo", "hasClueOrChallengeScrollInBank_" + tier.name(), false);
+					}
+
+					int assumedBankCount = assumedBankedScrollBoxCount;
+					if (bankedChallengeScroll || bankedClueScroll)
+						assumedBankCount += 1;
+
+					clueCountStorage.setBankCount(tier, assumedBankCount);
+				}
 			}
 
+			boolean hasScrollInBank = Boolean.TRUE.equals(
+					configManager.getRSProfileConfiguration("scrollboxinfo", "hasClueOrChallengeScrollInBank_" + tier.name(), Boolean.class)
+			);
+
 			count += clueCountStorage.getBankCount(tier);
+
 			if ((inventory.hasClueScroll() && inventory.hasChallengeScroll())
 				|| (inventory.hasClueScroll() && bankedChallengeScroll)
 				|| (inventory.hasChallengeScroll() && bankedClueScroll)
-				|| ((inventory.hasClueScroll() || inventory.hasChallengeScroll()) && hasScrollInBank))
+				|| ((inventory.hasClueScroll() || inventory.hasChallengeScroll()) && hasScrollInBank)) {
 				count -= 1;
+				//log.info("inventory.hasClueScroll: {}, inventory.hasChallengeScroll: {}", inventory.hasClueScroll(), inventory.hasChallengeScroll());
+				//log.info("bankedClueScroll: {}, bankedChallengeScroll: {}, hasScrollInBank: {}", bankedClueScroll, bankedChallengeScroll, hasScrollInBank);
+			}
 			clueCountStorage.setCount(tier, count);
 
 			int cap = StackLimitCalculator.getStackLimit(tier, client);
@@ -321,6 +341,34 @@ public class ScrollBoxInfoPlugin extends Plugin
 			previousInventoryClueScrollState.put(tier, inventory.hasClueScroll());
 			previousInventoryChallengeScrollState.put(tier, inventory.hasChallengeScroll());
 			previousTotalClueCounts.put(tier, clueCountStorage.getCount(tier));
+		}
+		recentlyPickedUp.clear();
+		recentlyDropped.clear();
+	}
+
+	@Subscribe
+	public void onItemSpawned(ItemSpawned event)
+	{
+		if (bankWasOpenLastTick || depositBoxIsOpen || depositBoxWasOpenLastTick)
+		{
+			int itemId = event.getItem().getId();
+			ClueTier tier = ClueUtils.getClueTier(client, itemId);
+			if (tier == null) return;
+
+			recentlyDropped.put(tier, event.getItem().getQuantity());
+		}
+	}
+
+	@Subscribe
+	public void onItemDespawned(ItemDespawned event)
+	{
+		if (bankWasOpenLastTick || depositBoxIsOpen || depositBoxWasOpenLastTick)
+		{
+			int itemId = event.getItem().getId();
+			ClueTier tier = ClueUtils.getClueTier(client, itemId);
+			if (tier == null) return;
+
+			recentlyPickedUp.put(tier, event.getItem().getQuantity());
 		}
 	}
 

@@ -18,6 +18,14 @@ public interface ScrollBoxInfoConfig extends Config
 		BOTTOM_RIGHT
 	}
 
+	public enum ClueScrollOverlay
+	{
+		OFF,
+		ONLY_NUMBERS,
+		ONLY_TIER_LABEL,
+		BOTH
+	}
+
 	@ConfigSection(
 			name = "Tooltip overlay",
 			description = "Customize how clue scroll information is shown in the tooltip overlay",
@@ -254,6 +262,18 @@ public interface ScrollBoxInfoConfig extends Config
 	default TextPosition showStackLimitPosition()
 	{
 		return TextPosition.OFF;
+	}
+
+	@ConfigItem(
+			keyName = "showClueScrollOverlay",
+			name = "Show on clue scrolls",
+			description = "Show or hide overlays on clue scrolls",
+			position = 114,
+			section = itemOverlay
+	)
+	default ClueScrollOverlay showClueScrollOverlay()
+	{
+		return ClueScrollOverlay.OFF;
 	}
 
 	// ===== Infobox =====

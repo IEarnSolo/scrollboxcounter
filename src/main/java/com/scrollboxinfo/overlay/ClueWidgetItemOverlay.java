@@ -71,12 +71,53 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
             }
         }
 
-        if (config.showTierLabel() && tier != null)
+        boolean showTierConfig = config.showTierLabel();
+        boolean showBanked = config.showBankedPosition() != ScrollBoxInfoConfig.TextPosition.OFF;
+        boolean showStackLimit = config.showStackLimitPosition() != ScrollBoxInfoConfig.TextPosition.OFF;
+        boolean showCurrentTotal = config.showCurrentTotalPosition() != ScrollBoxInfoConfig.TextPosition.OFF;
+
+        boolean showNumbers = showBanked || showStackLimit || showCurrentTotal;
+        boolean isScrollBox = isScrollBox(itemId);
+        boolean isClueScroll = clueUtils.isClueOrChallengeScroll(client, itemId);
+
+        ScrollBoxInfoConfig.ClueScrollOverlay overlayMode = config.showClueScrollOverlay();
+
+        boolean showTier = false;
+        boolean showNumberOverlays = false;
+
+        if (isScrollBox)
+        {
+            showTier = showTierConfig;
+            showNumberOverlays = showNumbers;
+        }
+        else if (isClueScroll)
+        {
+            switch (overlayMode)
+            {
+                case OFF:
+                    showTier = false;
+                    showNumberOverlays = false;
+                    break;
+                case ONLY_TIER_LABEL:
+                    showTier = showTierConfig;
+                    showNumberOverlays = false;
+                    break;
+                case ONLY_NUMBERS:
+                    showTier = false;
+                    showNumberOverlays = showNumbers;
+                    break;
+                case BOTH:
+                    showTier = showTierConfig;
+                    showNumberOverlays = showNumbers;
+                    break;
+            }
+        }
+
+        if (showTier && showTierConfig && tier != null)
         {
             String tierName = clueUtils.getFormattedTierName(tier);
 
             Color tierColor;
-
             if (!config.colorTierLabel())
             {
                 tierColor = Color.WHITE;
@@ -118,26 +159,28 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
         }
 
         int banked = storage.getBankCount(tier);
-
         Widget bankWidget = widgetItem.getWidget();
-        if (banked > 0
-                && config.showBankedPosition() != ScrollBoxInfoConfig.TextPosition.OFF
-                && bankWidget != null
-                && bankWidget.getId() != ComponentID.BANK_ITEM_CONTAINER)
-        {
-            renderPositionedText(graphics, bounds, "+" + banked, Color.WHITE, config.showBankedPosition());
-        }
 
-        if (config.showStackLimitPosition() != ScrollBoxInfoConfig.TextPosition.OFF)
+        if (showNumberOverlays && showNumbers)
         {
-            renderPositionedText(graphics, bounds, String.valueOf(!questChecker.isXMarksTheSpotComplete() ? 1 : cap), Color.WHITE, config.showStackLimitPosition());
-        }
+            if (banked > 0
+                    && showBanked
+                    && bankWidget != null
+                    && bankWidget.getId() != ComponentID.BANK_ITEM_CONTAINER)
+            {
+                renderPositionedText(graphics, bounds, "+" + banked, Color.WHITE, config.showBankedPosition());
+            }
 
-        if (config.showCurrentTotalPosition() != ScrollBoxInfoConfig.TextPosition.OFF)
-        {
-            renderPositionedText(graphics, bounds, String.valueOf(current), Color.WHITE, config.showCurrentTotalPosition());
-        }
+            if (showStackLimit)
+            {
+                renderPositionedText(graphics, bounds, String.valueOf(!questChecker.isXMarksTheSpotComplete() ? 1 : cap), Color.WHITE, config.showStackLimitPosition());
+            }
 
+            if (showCurrentTotal)
+            {
+                renderPositionedText(graphics, bounds, String.valueOf(current), Color.WHITE, config.showCurrentTotalPosition());
+            }
+        }
 
         Point mousePos = client.getMouseCanvasPosition();
         if (!widgetItem.getCanvasBounds().contains(mousePos.getX(), mousePos.getY())) {
@@ -253,7 +296,6 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
                 return false;
         }
     }
-
 
     public void resetMarkedStacks()
     {

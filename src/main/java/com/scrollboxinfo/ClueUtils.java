@@ -110,6 +110,32 @@ public class ClueUtils
         }
     }
 
+    public boolean isClueOrChallengeScroll(Client client, int itemId)
+    {
+        if (itemId <= 0)
+        {
+            return false;
+        }
+
+        ItemComposition item = client.getItemDefinition(itemId);
+        if (item == null)
+        {
+            return false;
+        }
+
+        String name = item.getName().toLowerCase();
+        if (name == null)
+        {
+            return false;
+        }
+
+        if (name.startsWith("clue scroll (") || name.startsWith("challenge scroll ("))
+        {
+            return true;
+        }
+        return false;
+    }
+
     public static String formatTierName(ClueTier tier) {
         String name = tier.name().toLowerCase();
         return Character.toUpperCase(name.charAt(0)) + name.substring(1);
