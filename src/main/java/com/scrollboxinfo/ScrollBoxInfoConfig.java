@@ -372,6 +372,103 @@ public interface ScrollBoxInfoConfig extends Config
 		return true;
 	}
 
+	// ===== Persistent total clue counts =====
+
+	@ConfigItem(
+			keyName = "totalBeginner",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	default int totalBeginner() { return 0; }
+
+	@ConfigItem(
+			keyName = "totalBeginner",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	void setTotalBeginner(int value);
+
+	@ConfigItem(
+			keyName = "totalEasy",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	default int totalEasy() { return 0; }
+
+	@ConfigItem(
+			keyName = "totalEasy",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	void setTotalEasy(int value);
+
+	@ConfigItem(
+			keyName = "totalMedium",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	default int totalMedium() { return 0; }
+
+	@ConfigItem(
+			keyName = "totalMedium",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	void setTotalMedium(int value);
+
+	@ConfigItem(
+			keyName = "totalHard",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	default int totalHard() { return 0; }
+
+	@ConfigItem(
+			keyName = "totalHard",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	void setTotalHard(int value);
+
+	@ConfigItem(
+			keyName = "totalElite",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	default int totalElite() { return 0; }
+
+	@ConfigItem(
+			keyName = "totalElite",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	void setTotalElite(int value);
+
+	@ConfigItem(
+			keyName = "totalMaster",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	default int totalMaster() { return 0; }
+
+	@ConfigItem(
+			keyName = "totalMaster",
+			name = "",
+			description = "",
+			hidden = true
+	)
+	void setTotalMaster(int value);
 
 	// ===== Persistent banked clue counts =====
 

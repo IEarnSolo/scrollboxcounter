@@ -15,6 +15,7 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.ProfileChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -141,23 +142,54 @@ public class ScrollBoxInfoPlugin extends Plugin
 		}
 	}
 
+	private void removeAllInfoboxes()
+	{
+		if (stackInfoBoxes != null && !stackInfoBoxes.isEmpty())
+		{
+			for (StackLimitInfoBox box : stackInfoBoxes.values())
+			{
+				if (box != null)
+				{
+					infoBoxManager.removeInfoBox(box);
+				}
+			}
+			stackInfoBoxes.clear();
+		}
+	}
+
 	@Override
 	protected void startUp() throws Exception
 	{
 		clueCountStorage.loadBankCountsFromConfig();
+		clueCountStorage.loadTotalCountsFromConfig();
 		overlayManager.add(clueWidgetItemOverlay);
-		for (ClueTier tier : ClueTier.values())
-		{
-			recentlyPickedUp.clear();
-			recentlyDropped.clear();
-		}
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
+		removeAllInfoboxes();
 		overlayManager.remove(clueWidgetItemOverlay);
 		clueWidgetItemOverlay.resetMarkedStacks();
+	}
+
+	@Subscribe
+	public void onProfileChanged(ProfileChanged event)
+	{
+		removeAllInfoboxes();
+
+		clientThread.invokeLater(() ->
+		{
+			clueCountStorage.loadBankCountsFromConfig();
+			clueCountStorage.loadTotalCountsFromConfig();
+
+			for (ClueTier tier : ClueTier.values())
+			{
+				int count = clueCounter.getClueCounts(tier);
+				int cap = StackLimitCalculator.getStackLimit(tier, client);
+				checkAndDisplayInfobox(tier, count, cap);
+			}
+		});
 	}
 
 	@Subscribe

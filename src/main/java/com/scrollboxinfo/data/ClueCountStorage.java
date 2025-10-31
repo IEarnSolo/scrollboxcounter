@@ -24,6 +24,28 @@ public class ClueCountStorage
     public void setCount(ClueTier tier, int count)
     {
         clueCounts.put(tier, count);
+
+        switch (tier)
+        {
+            case BEGINNER:
+                config.setTotalBeginner(count);
+                break;
+            case EASY:
+                config.setTotalEasy(count);
+                break;
+            case MEDIUM:
+                config.setTotalMedium(count);
+                break;
+            case HARD:
+                config.setTotalHard(count);
+                break;
+            case ELITE:
+                config.setTotalElite(count);
+                break;
+            case MASTER:
+                config.setTotalMaster(count);
+                break;
+        }
     }
 
     public int getCount(ClueTier tier)
@@ -58,7 +80,6 @@ public class ClueCountStorage
         }
     }
 
-
     public void loadBankCountsFromConfig()
     {
         bankCounts.put(ClueTier.BEGINNER, config.bankedBeginner());
@@ -72,5 +93,15 @@ public class ClueCountStorage
     public int getBankCount(ClueTier tier)
     {
         return bankCounts.getOrDefault(tier, 0);
+    }
+
+    public void loadTotalCountsFromConfig()
+    {
+        clueCounts.put(ClueTier.BEGINNER, config.totalBeginner());
+        clueCounts.put(ClueTier.EASY, config.totalEasy());
+        clueCounts.put(ClueTier.MEDIUM, config.totalMedium());
+        clueCounts.put(ClueTier.HARD, config.totalHard());
+        clueCounts.put(ClueTier.ELITE, config.totalElite());
+        clueCounts.put(ClueTier.MASTER, config.totalMaster());
     }
 }
