@@ -5,6 +5,7 @@ import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemID;
 
 import javax.inject.Inject;
+import java.util.Locale;
 
 public class ClueUtils
 {
@@ -135,6 +136,47 @@ public class ClueUtils
         }
         return false;
     }
+
+	public static boolean isRewardCasketName(String itemName)
+	{
+		return itemName != null && itemName.toLowerCase(Locale.ENGLISH).startsWith("reward casket (");
+	}
+
+	public static ClueTier getRewardCasketTier(String itemName)
+	{
+		if (!isRewardCasketName(itemName))
+		{
+			return null;
+		}
+
+		String normalizedName = itemName.toLowerCase(Locale.ENGLISH);
+		if (normalizedName.startsWith("reward casket (beginner)"))
+		{
+			return ClueTier.BEGINNER;
+		}
+		else if (normalizedName.startsWith("reward casket (easy)"))
+		{
+			return ClueTier.EASY;
+		}
+		else if (normalizedName.startsWith("reward casket (medium)"))
+		{
+			return ClueTier.MEDIUM;
+		}
+		else if (normalizedName.startsWith("reward casket (hard)"))
+		{
+			return ClueTier.HARD;
+		}
+		else if (normalizedName.startsWith("reward casket (elite)"))
+		{
+			return ClueTier.ELITE;
+		}
+		else if (normalizedName.startsWith("reward casket (master)"))
+		{
+			return ClueTier.MASTER;
+		}
+
+		return null;
+	}
 
     public static String formatTierName(ClueTier tier) {
         String name = tier.name().toLowerCase();

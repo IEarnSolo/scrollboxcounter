@@ -111,6 +111,30 @@ public interface ScrollBoxInfoConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+			keyName = "showNextUnlockOnCaskets",
+			name = "Show next increase on caskets",
+			description = "Display how many clue completions until the next stack limit increase on reward caskets",
+			position = 5,
+			section = tooltipOverlay
+	)
+	default boolean showNextUnlockOnCaskets()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "showClueRewardUnlocks",
+			name = "Show clue reward unlocks",
+			description = "Display how many clue completions remain until the tier-specific clue reward unlock",
+			position = 6,
+			section = tooltipOverlay
+	)
+	default boolean showClueRewardUnlocks()
+	{
+		return true;
+	}
+
 	// ===== Item overlay =====
 
 	@ConfigItem(

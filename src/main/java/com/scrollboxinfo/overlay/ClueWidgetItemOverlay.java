@@ -5,6 +5,7 @@ import com.scrollboxinfo.data.ClueCountStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemID;
 import net.runelite.api.Point;
 import net.runelite.api.widgets.ItemQuantityMode;
@@ -53,6 +54,15 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
     @Override
     public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem widgetItem)
     {
+        ItemComposition itemComposition = client.getItemDefinition(itemId);
+        String itemName = itemComposition != null ? itemComposition.getName() : null;
+        if (ClueUtils.isRewardCasketName(itemName))
+        {
+            ClueTier casketTier = ClueUtils.getRewardCasketTier(itemName);
+            renderRewardCasketTooltip(casketTier, widgetItem);
+            return;
+        }
+
         ClueTier tier = ClueUtils.getClueTier(client, itemId);
         if (tier == null)
             return;
@@ -187,49 +197,116 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
             return;
         }
 
-        if (!questChecker.isXMarksTheSpotComplete()) {
-            //tooltipManager.add(new Tooltip("Complete X Marks the Spot quest to start tracking clues"));
+        List<String> lines = new ArrayList<>();
+
+        if (questChecker.isXMarksTheSpotComplete())
+        {
+            if (config.showBanked() && banked != 0)
+            {
+                lines.add("Banked: " + banked);
+            }
+
+            if (config.showCurrent())
+            {
+                lines.add("Current total: " + current);
+            }
+
+            if (config.showCap())
+            {
+                lines.add("Stack limit: " + cap);
+            }
+
+            if (config.showNextUnlock())
+            {
+                Integer cluesUntilNextUnlock = getCluesUntilNextUnlock(tier);
+                if (cluesUntilNextUnlock != null)
+                {
+                    lines.add("Next increase in: " + cluesUntilNextUnlock + " clues");
+                }
+            }
+        }
+
+        addClueRewardUnlockLine(lines, tier);
+
+        if (!lines.isEmpty())
+        {
+            tooltipManager.add(new Tooltip(String.join("<br>", lines)));
+        }
+    }
+
+    private void renderRewardCasketTooltip(ClueTier tier, WidgetItem widgetItem)
+    {
+        Point mousePos = client.getMouseCanvasPosition();
+        if (!widgetItem.getCanvasBounds().contains(mousePos.getX(), mousePos.getY()))
+        {
+            return;
+        }
+
+        if (tier == null)
+        {
             return;
         }
 
         List<String> lines = new ArrayList<>();
 
-        if (config.showBanked() && banked != 0)
+        if (config.showNextUnlockOnCaskets() && questChecker.isXMarksTheSpotComplete())
         {
-            lines.add("Banked: " + banked);
-        }
-
-        if (config.showCurrent())
-        {
-            lines.add("Current total: " + current);
-        }
-
-        if (config.showCap())
-        {
-            lines.add("Stack limit: " + cap);
-        }
-
-        if (config.showNextUnlock())
-        {
-            Integer varpId = tierToVarpId.get(tier);
-            int completed = varpId != null ? client.getVarpValue(varpId) : 0;
-            int[] unlocks = tierUnlockThresholds.getOrDefault(tier, new int[0]);
-
-            for (int threshold : unlocks)
+            Integer cluesUntilNextUnlock = getCluesUntilNextUnlock(tier);
+            if (cluesUntilNextUnlock != null)
             {
-                if (completed < threshold)
-                {
-                    lines.add("Next increase in: " + (threshold - completed) + " clues");
-                    break;
-                }
+                lines.add("Next increase in: " + cluesUntilNextUnlock + " clues");
             }
         }
 
+        addClueRewardUnlockLine(lines, tier);
+
         if (!lines.isEmpty())
         {
-            if (questChecker.isXMarksTheSpotComplete())
-                tooltipManager.add(new Tooltip(String.join("<br>", lines)));
+            tooltipManager.add(new Tooltip(String.join("<br>", lines)));
         }
+    }
+
+    private void addClueRewardUnlockLine(List<String> lines, ClueTier tier)
+    {
+        if (!config.showClueRewardUnlocks())
+        {
+            return;
+        }
+
+        Integer rewardThreshold = tierRewardUnlockThresholds.get(tier);
+        String rewardName = tierRewardUnlockNames.get(tier);
+        Integer varpId = tierToVarpId.get(tier);
+        if (rewardThreshold == null || rewardName == null || varpId == null)
+        {
+            return;
+        }
+
+        int cluesRemaining = rewardThreshold - client.getVarpValue(varpId);
+        if (cluesRemaining > 0)
+        {
+            lines.add(rewardName + " unlock in: " + cluesRemaining + " clues");
+        }
+    }
+
+    private Integer getCluesUntilNextUnlock(ClueTier tier)
+    {
+        Integer varpId = tierToVarpId.get(tier);
+        int completed = varpId != null ? client.getVarpValue(varpId) : 0;
+        return getCluesUntilNextUnlock(tier, completed);
+    }
+
+    static Integer getCluesUntilNextUnlock(ClueTier tier, int completed)
+    {
+        int[] unlocks = tierUnlockThresholds.getOrDefault(tier, new int[0]);
+        for (int threshold : unlocks)
+        {
+            if (completed < threshold)
+            {
+                return threshold - completed;
+            }
+        }
+
+        return null;
     }
 
     private void renderQuantity(Graphics2D graphics, Rectangle bounds, int quantity, Color textColor)
@@ -350,6 +427,24 @@ public class ClueWidgetItemOverlay extends WidgetItemOverlay
             ClueTier.HARD, new int[] {50, 150},
             ClueTier.ELITE, new int[] {50, 150},
             ClueTier.MASTER, new int[] {25, 75}
+    );
+
+    private static final Map<ClueTier, Integer> tierRewardUnlockThresholds = Map.of(
+            ClueTier.BEGINNER, 600,
+            ClueTier.EASY, 500,
+            ClueTier.MEDIUM, 400,
+            ClueTier.HARD, 300,
+            ClueTier.ELITE, 200,
+            ClueTier.MASTER, 100
+    );
+
+    private static final Map<ClueTier, String> tierRewardUnlockNames = Map.of(
+            ClueTier.BEGINNER, "Explore emote",
+            ClueTier.EASY, "Large spade",
+            ClueTier.MEDIUM, "Clueless scroll",
+            ClueTier.HARD, "Uri transform emote",
+            ClueTier.ELITE, "Heavy casket",
+            ClueTier.MASTER, "Scroll sack"
     );
 
 }

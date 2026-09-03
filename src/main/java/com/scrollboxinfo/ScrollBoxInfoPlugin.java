@@ -6,6 +6,8 @@ import javax.inject.Inject;
 import com.scrollboxinfo.data.ClueCountStorage;
 import com.scrollboxinfo.overlay.ClueWidgetItemOverlay;
 import com.scrollboxinfo.overlay.StackLimitInfoBox;
+import com.scrollboxinfo.toa.ToaBankResult;
+import com.scrollboxinfo.toa.ToaChestTracker;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
@@ -65,6 +67,8 @@ public class ScrollBoxInfoPlugin extends Plugin
 	private StackLimitInfoBox stackInfoBox;
 	@Inject
 	private ClientThread clientThread;
+	@Inject
+	private ToaChestTracker toaChestTracker;
 
 	private boolean bankWasOpenLastTick = false;
 	private boolean bankIsOpen = false;
@@ -72,7 +76,7 @@ public class ScrollBoxInfoPlugin extends Plugin
 	private boolean depositBoxWasOpenLastTick = false;
 	private long lastAccountHash = -1;
 	private String lastWorldBucket = "";
-	private static final String PLUGIN_VERSION = "1.2.1";
+	private static final String PLUGIN_VERSION = "1.3.0";
 	private static final String CHANGELOG_RESOURCE = "/changelog.md";
 	private boolean changelogShownThisSession = false;
 	private static final String IGNORE_CONFIG_KEY = "lastSeenChangelogVersion";
@@ -646,6 +650,7 @@ public class ScrollBoxInfoPlugin extends Plugin
 	@Override
 	protected void shutDown() throws Exception
 	{
+		toaChestTracker.reset("plugin shutdown");
 		removeAllInfoboxes();
 		overlayManager.remove(clueWidgetItemOverlay);
 		clueWidgetItemOverlay.resetMarkedStacks();
@@ -793,6 +798,7 @@ public class ScrollBoxInfoPlugin extends Plugin
 		}
 		else if (state == GameState.LOGIN_SCREEN)
 		{
+			toaChestTracker.reset("login screen");
 			if (lastAccountHash != -1 && !lastWorldBucket.isEmpty())
 			{
 				log.debug("LOGIN_SCREEN: saving settings for account={}, world={} before logout", lastAccountHash, lastWorldBucket);
@@ -807,6 +813,8 @@ public class ScrollBoxInfoPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick tick)
 	{
+		toaChestTracker.onGameTick(client.getTickCount()).ifPresent(this::applyToaBankResult);
+
 		bankWasOpenLastTick = bankIsOpen;
 		depositBoxWasOpenLastTick = depositBoxIsOpen;
 
@@ -818,8 +826,34 @@ public class ScrollBoxInfoPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		toaChestTracker.onMenuOptionClicked(event);
+	}
+
+	@Subscribe
+	public void onWidgetLoaded(WidgetLoaded event)
+	{
+		toaChestTracker.onWidgetLoaded(event);
+	}
+
+	@Subscribe
+	public void onCommandExecuted(CommandExecuted event)
+	{
+		toaChestTracker.onCommandExecuted(event);
+	}
+
+	@Subscribe
+	public void onWidgetClosed(WidgetClosed event)
+	{
+		toaChestTracker.onWidgetClosed(event);
+	}
+
+	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
+		toaChestTracker.onItemContainerChanged(event).ifPresent(this::applyToaBankResult);
+
 		ItemContainer inventoryContainer = client.getItemContainer(InventoryID.INVENTORY);
 		ItemContainer bankContainer = client.getItemContainer(InventoryID.BANK);
 
@@ -960,6 +994,65 @@ public class ScrollBoxInfoPlugin extends Plugin
 		}
 		recentlyPickedUp.clear();
 		recentlyDropped.clear();
+	}
+
+	private void applyToaBankResult(ToaBankResult result)
+	{
+		log.debug("Applying ToA tracker result: eliteScrollBoxes={}, eliteClueScroll={}, source='{}'",
+				result.getEliteScrollBoxCount(), result.hasEliteClueScroll(), result.getConfirmationSource());
+		applyToaEliteBankedRewards(
+				result.getEliteScrollBoxCount(),
+				result.hasEliteClueScroll(),
+				result.getConfirmationSource()
+		);
+	}
+
+	private void applyToaEliteBankedRewards(int bankedEliteScrollBoxCount, boolean bankedEliteClueScroll,
+			String confirmationSource)
+	{
+		boolean bankScrollAlreadyRepresented = previousBankClueScrollState.getOrDefault(ClueTier.ELITE, false)
+				|| loadBankScrollFlagFromConfig(ClueTier.ELITE);
+		int bankedEliteClueIncrement = bankedEliteClueScroll && !bankScrollAlreadyRepresented ? 1 : 0;
+		int totalBankCountIncrement = bankedEliteScrollBoxCount + bankedEliteClueIncrement;
+		log.debug("Applying ToA elite bank result from '{}': scrollBoxes={}, clueScroll={}, bankScrollAlreadyRepresented={}, clueIncrement={}, totalIncrement={}",
+				confirmationSource, bankedEliteScrollBoxCount, bankedEliteClueScroll,
+				bankScrollAlreadyRepresented, bankedEliteClueIncrement, totalBankCountIncrement);
+
+		if (totalBankCountIncrement > 0)
+		{
+			int updatedBankCount = clueCountStorage.getBankCount(ClueTier.ELITE) + totalBankCountIncrement;
+			clueCountStorage.setBankCount(ClueTier.ELITE, updatedBankCount);
+			saveBankCountToConfig(ClueTier.ELITE, updatedBankCount);
+
+			int updatedTotalCount = clueCountStorage.getCount(ClueTier.ELITE) + totalBankCountIncrement;
+			clueCountStorage.setCount(ClueTier.ELITE, updatedTotalCount);
+			saveTotalCountToConfig(ClueTier.ELITE, updatedTotalCount);
+			previousTotalClueCounts.put(ClueTier.ELITE, updatedTotalCount);
+			int eliteCap = StackLimitCalculator.getStackLimit(ClueTier.ELITE, client);
+			if (config.showFullStackInfobox())
+			{
+				checkAndDisplayInfobox(ClueTier.ELITE, updatedTotalCount, eliteCap);
+			}
+
+			int updatedBankScrollBoxCount = previousBankScrollBoxCount.getOrDefault(ClueTier.ELITE, 0)
+					+ bankedEliteScrollBoxCount;
+			previousBankScrollBoxCount.put(ClueTier.ELITE, updatedBankScrollBoxCount);
+			log.debug("Applied ToA elite deposit from '{}': scrollBoxes={}, clueIncrement={}, bankCount={}, totalCount={}, cachedBoxCount={}",
+					confirmationSource, bankedEliteScrollBoxCount, bankedEliteClueIncrement,
+					updatedBankCount, updatedTotalCount, updatedBankScrollBoxCount);
+		}
+		else
+		{
+			log.debug("ToA Bank-all result from '{}' produced no new elite bank-count increment", confirmationSource);
+		}
+
+		if (bankedEliteClueScroll)
+		{
+			previousBankClueScrollState.put(ClueTier.ELITE, true);
+			saveBankScrollFlagToConfig(ClueTier.ELITE, true);
+			log.debug("Recorded ToA elite clue scroll in bank state from '{}'; countIncremented={}",
+					confirmationSource, bankedEliteClueIncrement == 1);
+		}
 	}
 
 	@Subscribe
