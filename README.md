@@ -14,6 +14,8 @@
 - Current total: How many clues you have across your inventory and bank
 - Stack limit: How many clues of that tier you can currently hold at one time
 - Next increase: How many more clues must be completed to increase your stack limit
+- Next increase on caskets: Displays next increase amount on reward caskets
+- Clue reward unlocks: How many more clues must be completed to unlock the tier-specific reward
 
 ![Screenshot](tooltip-overlay.png)
 <hr/>
